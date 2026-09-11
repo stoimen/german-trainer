@@ -1,0 +1,406 @@
+export type Article = 'der' | 'die' | 'das'
+export type Level = 'A2' | 'B1' | 'B2' | 'C1'
+
+export type Noun = {
+  german: string // singular, no article
+  article: Article
+  plural: string // e.g. "Hunde"
+  english: string
+  level: Level
+  cases: {
+    nominative: string // e.g. "der Hund"
+    accusative: string // "den Hund"
+    dative: string // "dem Hund"
+    genitive: string // "des Hundes"
+  }
+}
+
+/**
+ * How a der/das noun's singular declines. Feminine nouns are always
+ * invariant across cases, so they don't need one of these.
+ *  - strong-s / strong-es: regular, genitive adds -s or -es
+ *  - weak-en / weak-n: weak masculine noun, adds -en/-n in acc/dat/gen (der Student -> den Studenten)
+ *  - mixed-ns: mixed declension, adds -n in acc/dat but -ns in genitive (der Name -> des Namens)
+ */
+type Declension = 'strong-s' | 'strong-es' | 'weak-en' | 'weak-n' | 'mixed-ns'
+
+type RawWord = {
+  german: string
+  article: Article
+  plural: string
+  english: string
+  level: Level
+  declension?: Declension // required for der/das nouns, ignored for die nouns
+}
+
+function computeCases(word: RawWord): Noun['cases'] {
+  const { german, article, declension } = word
+
+  if (article === 'die') {
+    return {
+      nominative: `die ${german}`,
+      accusative: `die ${german}`,
+      dative: `der ${german}`,
+      genitive: `der ${german}`,
+    }
+  }
+
+  if (!declension) {
+    throw new Error(`Missing declension for ${article} ${german}`)
+  }
+
+  if (declension === 'weak-en' || declension === 'weak-n') {
+    const suffix = declension === 'weak-en' ? 'en' : 'n'
+    return {
+      nominative: `${article} ${german}`,
+      accusative: `den ${german}${suffix}`,
+      dative: `dem ${german}${suffix}`,
+      genitive: `des ${german}${suffix}`,
+    }
+  }
+
+  if (declension === 'mixed-ns') {
+    return {
+      nominative: `${article} ${german}`,
+      accusative: `den ${german}n`,
+      dative: `dem ${german}n`,
+      genitive: `des ${german}ns`,
+    }
+  }
+
+  // strong-s / strong-es
+  const genitiveSuffix = declension === 'strong-es' ? 'es' : 's'
+  return {
+    nominative: `${article} ${german}`,
+    accusative: article === 'der' ? `den ${german}` : `das ${german}`,
+    dative: `dem ${german}`,
+    genitive: `des ${german}${genitiveSuffix}`,
+  }
+}
+
+function toNoun(word: RawWord): Noun {
+  return {
+    german: word.german,
+    article: word.article,
+    plural: word.plural,
+    english: word.english,
+    level: word.level,
+    cases: computeCases(word),
+  }
+}
+
+// prettier-ignore
+const RAW_WORDS: RawWord[] = [
+  // ---------- A2 (80) ----------
+  { german: 'Hund', article: 'der', plural: 'Hunde', english: 'dog', level: 'A2', declension: 'strong-es' },
+  { german: 'Katze', article: 'die', plural: 'Katzen', english: 'cat', level: 'A2' },
+  { german: 'Haus', article: 'das', plural: 'Häuser', english: 'house', level: 'A2', declension: 'strong-es' },
+  { german: 'Tisch', article: 'der', plural: 'Tische', english: 'table', level: 'A2', declension: 'strong-es' },
+  { german: 'Blume', article: 'die', plural: 'Blumen', english: 'flower', level: 'A2' },
+  { german: 'Fenster', article: 'das', plural: 'Fenster', english: 'window', level: 'A2', declension: 'strong-s' },
+  { german: 'Student', article: 'der', plural: 'Studenten', english: 'student (male)', level: 'A2', declension: 'weak-en' },
+  { german: 'Frau', article: 'die', plural: 'Frauen', english: 'woman', level: 'A2' },
+  { german: 'Buch', article: 'das', plural: 'Bücher', english: 'book', level: 'A2', declension: 'strong-es' },
+  { german: 'Freund', article: 'der', plural: 'Freunde', english: 'friend (male)', level: 'A2', declension: 'strong-es' },
+  { german: 'Straße', article: 'die', plural: 'Straßen', english: 'street', level: 'A2' },
+  { german: 'Auto', article: 'das', plural: 'Autos', english: 'car', level: 'A2', declension: 'strong-s' },
+  { german: 'Zimmer', article: 'das', plural: 'Zimmer', english: 'room', level: 'A2', declension: 'strong-s' },
+  { german: 'Küche', article: 'die', plural: 'Küchen', english: 'kitchen', level: 'A2' },
+  { german: 'Tür', article: 'die', plural: 'Türen', english: 'door', level: 'A2' },
+  { german: 'Stuhl', article: 'der', plural: 'Stühle', english: 'chair', level: 'A2', declension: 'strong-s' },
+  { german: 'Bett', article: 'das', plural: 'Betten', english: 'bed', level: 'A2', declension: 'strong-es' },
+  { german: 'Schrank', article: 'der', plural: 'Schränke', english: 'cupboard, closet', level: 'A2', declension: 'strong-s' },
+  { german: 'Lampe', article: 'die', plural: 'Lampen', english: 'lamp', level: 'A2' },
+  { german: 'Spiegel', article: 'der', plural: 'Spiegel', english: 'mirror', level: 'A2', declension: 'strong-s' },
+  { german: 'Teppich', article: 'der', plural: 'Teppiche', english: 'carpet, rug', level: 'A2', declension: 'strong-s' },
+  { german: 'Decke', article: 'die', plural: 'Decken', english: 'ceiling, blanket', level: 'A2' },
+  { german: 'Wand', article: 'die', plural: 'Wände', english: 'wall (interior)', level: 'A2' },
+  { german: 'Boden', article: 'der', plural: 'Böden', english: 'floor, ground', level: 'A2', declension: 'strong-s' },
+  { german: 'Schlüssel', article: 'der', plural: 'Schlüssel', english: 'key', level: 'A2', declension: 'strong-s' },
+  { german: 'Tasche', article: 'die', plural: 'Taschen', english: 'bag', level: 'A2' },
+  { german: 'Rucksack', article: 'der', plural: 'Rucksäcke', english: 'backpack', level: 'A2', declension: 'strong-s' },
+  { german: 'Koffer', article: 'der', plural: 'Koffer', english: 'suitcase', level: 'A2', declension: 'strong-s' },
+  { german: 'Regal', article: 'das', plural: 'Regale', english: 'shelf', level: 'A2', declension: 'strong-s' },
+  { german: 'Brot', article: 'das', plural: 'Brote', english: 'bread', level: 'A2', declension: 'strong-es' },
+  { german: 'Brötchen', article: 'das', plural: 'Brötchen', english: 'bread roll', level: 'A2', declension: 'strong-s' },
+  { german: 'Milch', article: 'die', plural: 'Milch', english: 'milk', level: 'A2' },
+  { german: 'Wasser', article: 'das', plural: 'Wasser', english: 'water', level: 'A2', declension: 'strong-s' },
+  { german: 'Kaffee', article: 'der', plural: 'Kaffees', english: 'coffee', level: 'A2', declension: 'strong-s' },
+  { german: 'Tee', article: 'der', plural: 'Tees', english: 'tea', level: 'A2', declension: 'strong-s' },
+  { german: 'Saft', article: 'der', plural: 'Säfte', english: 'juice', level: 'A2', declension: 'strong-es' },
+  { german: 'Wein', article: 'der', plural: 'Weine', english: 'wine', level: 'A2', declension: 'strong-s' },
+  { german: 'Bier', article: 'das', plural: 'Biere', english: 'beer', level: 'A2', declension: 'strong-s' },
+  { german: 'Ei', article: 'das', plural: 'Eier', english: 'egg', level: 'A2', declension: 'strong-es' },
+  { german: 'Fleisch', article: 'das', plural: 'Fleisch', english: 'meat', level: 'A2', declension: 'strong-es' },
+  { german: 'Fisch', article: 'der', plural: 'Fische', english: 'fish', level: 'A2', declension: 'strong-es' },
+  { german: 'Gemüse', article: 'das', plural: 'Gemüse', english: 'vegetables', level: 'A2', declension: 'strong-s' },
+  { german: 'Obst', article: 'das', plural: 'Obst', english: 'fruit', level: 'A2', declension: 'strong-es' },
+  { german: 'Apfel', article: 'der', plural: 'Äpfel', english: 'apple', level: 'A2', declension: 'strong-s' },
+  { german: 'Banane', article: 'die', plural: 'Bananen', english: 'banana', level: 'A2' },
+  { german: 'Kartoffel', article: 'die', plural: 'Kartoffeln', english: 'potato', level: 'A2' },
+  { german: 'Tomate', article: 'die', plural: 'Tomaten', english: 'tomato', level: 'A2' },
+  { german: 'Suppe', article: 'die', plural: 'Suppen', english: 'soup', level: 'A2' },
+  { german: 'Kopf', article: 'der', plural: 'Köpfe', english: 'head', level: 'A2', declension: 'strong-es' },
+  { german: 'Auge', article: 'das', plural: 'Augen', english: 'eye', level: 'A2', declension: 'strong-s' },
+  { german: 'Nase', article: 'die', plural: 'Nasen', english: 'nose', level: 'A2' },
+  { german: 'Mund', article: 'der', plural: 'Münder', english: 'mouth', level: 'A2', declension: 'strong-es' },
+  { german: 'Ohr', article: 'das', plural: 'Ohren', english: 'ear', level: 'A2', declension: 'strong-es' },
+  { german: 'Arm', article: 'der', plural: 'Arme', english: 'arm', level: 'A2', declension: 'strong-es' },
+  { german: 'Bein', article: 'das', plural: 'Beine', english: 'leg', level: 'A2', declension: 'strong-s' },
+  { german: 'Hand', article: 'die', plural: 'Hände', english: 'hand', level: 'A2' },
+  { german: 'Fuß', article: 'der', plural: 'Füße', english: 'foot', level: 'A2', declension: 'strong-es' },
+  { german: 'Haar', article: 'das', plural: 'Haare', english: 'hair', level: 'A2', declension: 'strong-s' },
+  { german: 'Mann', article: 'der', plural: 'Männer', english: 'man', level: 'A2', declension: 'strong-es' },
+  { german: 'Kind', article: 'das', plural: 'Kinder', english: 'child', level: 'A2', declension: 'strong-es' },
+  { german: 'Vater', article: 'der', plural: 'Väter', english: 'father', level: 'A2', declension: 'strong-s' },
+  { german: 'Mutter', article: 'die', plural: 'Mütter', english: 'mother', level: 'A2' },
+  { german: 'Bruder', article: 'der', plural: 'Brüder', english: 'brother', level: 'A2', declension: 'strong-s' },
+  { german: 'Schwester', article: 'die', plural: 'Schwestern', english: 'sister', level: 'A2' },
+  { german: 'Sohn', article: 'der', plural: 'Söhne', english: 'son', level: 'A2', declension: 'strong-es' },
+  { german: 'Tochter', article: 'die', plural: 'Töchter', english: 'daughter', level: 'A2' },
+  { german: 'Vogel', article: 'der', plural: 'Vögel', english: 'bird', level: 'A2', declension: 'strong-s' },
+  { german: 'Pferd', article: 'das', plural: 'Pferde', english: 'horse', level: 'A2', declension: 'strong-es' },
+  { german: 'Sonne', article: 'die', plural: 'Sonnen', english: 'sun', level: 'A2' },
+  { german: 'Mond', article: 'der', plural: 'Monde', english: 'moon', level: 'A2', declension: 'strong-es' },
+  { german: 'Himmel', article: 'der', plural: 'Himmel', english: 'sky', level: 'A2', declension: 'strong-s' },
+  { german: 'Regen', article: 'der', plural: 'Regen', english: 'rain', level: 'A2', declension: 'strong-s' },
+  { german: 'Schnee', article: 'der', plural: 'Schnee', english: 'snow', level: 'A2', declension: 'strong-s' },
+  { german: 'Baum', article: 'der', plural: 'Bäume', english: 'tree', level: 'A2', declension: 'strong-es' },
+  { german: 'Schule', article: 'die', plural: 'Schulen', english: 'school', level: 'A2' },
+  { german: 'Lehrer', article: 'der', plural: 'Lehrer', english: 'teacher (male)', level: 'A2', declension: 'strong-s' },
+  { german: 'Stadt', article: 'die', plural: 'Städte', english: 'city', level: 'A2' },
+  { german: 'Land', article: 'das', plural: 'Länder', english: 'country', level: 'A2', declension: 'strong-es' },
+  { german: 'Zeit', article: 'die', plural: 'Zeiten', english: 'time', level: 'A2' },
+  { german: 'Jahr', article: 'das', plural: 'Jahre', english: 'year', level: 'A2', declension: 'strong-es' },
+
+  // ---------- B1 (80) ----------
+  { german: 'Arbeit', article: 'die', plural: 'Arbeiten', english: 'work, job', level: 'B1' },
+  { german: 'Beruf', article: 'der', plural: 'Berufe', english: 'profession', level: 'B1', declension: 'strong-s' },
+  { german: 'Firma', article: 'die', plural: 'Firmen', english: 'company', level: 'B1' },
+  { german: 'Büro', article: 'das', plural: 'Büros', english: 'office', level: 'B1', declension: 'strong-s' },
+  { german: 'Kollege', article: 'der', plural: 'Kollegen', english: 'colleague (male)', level: 'B1', declension: 'weak-n' },
+  { german: 'Kollegin', article: 'die', plural: 'Kolleginnen', english: 'colleague (female)', level: 'B1' },
+  { german: 'Chef', article: 'der', plural: 'Chefs', english: 'boss (male)', level: 'B1', declension: 'strong-s' },
+  { german: 'Kunde', article: 'der', plural: 'Kunden', english: 'customer (male)', level: 'B1', declension: 'weak-n' },
+  { german: 'Kundin', article: 'die', plural: 'Kundinnen', english: 'customer (female)', level: 'B1' },
+  { german: 'Vertrag', article: 'der', plural: 'Verträge', english: 'contract', level: 'B1', declension: 'strong-s' },
+  { german: 'Gehalt', article: 'das', plural: 'Gehälter', english: 'salary', level: 'B1', declension: 'strong-s' },
+  { german: 'Projekt', article: 'das', plural: 'Projekte', english: 'project', level: 'B1', declension: 'strong-s' },
+  { german: 'Sitzung', article: 'die', plural: 'Sitzungen', english: 'meeting', level: 'B1' },
+  { german: 'Bewerbung', article: 'die', plural: 'Bewerbungen', english: 'job application', level: 'B1' },
+  { german: 'Ausbildung', article: 'die', plural: 'Ausbildungen', english: 'vocational training', level: 'B1' },
+  { german: 'Reise', article: 'die', plural: 'Reisen', english: 'trip, journey', level: 'B1' },
+  { german: 'Flughafen', article: 'der', plural: 'Flughäfen', english: 'airport', level: 'B1', declension: 'strong-s' },
+  { german: 'Bahnhof', article: 'der', plural: 'Bahnhöfe', english: 'train station', level: 'B1', declension: 'strong-s' },
+  { german: 'Fahrkarte', article: 'die', plural: 'Fahrkarten', english: 'ticket (transport)', level: 'B1' },
+  { german: 'Gepäck', article: 'das', plural: 'Gepäck', english: 'luggage', level: 'B1', declension: 'strong-s' },
+  { german: 'Hotel', article: 'das', plural: 'Hotels', english: 'hotel', level: 'B1', declension: 'strong-s' },
+  { german: 'Ausflug', article: 'der', plural: 'Ausflüge', english: 'excursion', level: 'B1', declension: 'strong-s' },
+  { german: 'Grenze', article: 'die', plural: 'Grenzen', english: 'border', level: 'B1' },
+  { german: 'Pass', article: 'der', plural: 'Pässe', english: 'passport', level: 'B1', declension: 'strong-es' },
+  { german: 'Ticket', article: 'das', plural: 'Tickets', english: 'ticket (event)', level: 'B1', declension: 'strong-s' },
+  { german: 'Krankheit', article: 'die', plural: 'Krankheiten', english: 'illness', level: 'B1' },
+  { german: 'Gesundheit', article: 'die', plural: 'Gesundheit', english: 'health', level: 'B1' },
+  { german: 'Arzt', article: 'der', plural: 'Ärzte', english: 'doctor (male)', level: 'B1', declension: 'strong-es' },
+  { german: 'Ärztin', article: 'die', plural: 'Ärztinnen', english: 'doctor (female)', level: 'B1' },
+  { german: 'Patient', article: 'der', plural: 'Patienten', english: 'patient (male)', level: 'B1', declension: 'weak-en' },
+  { german: 'Medikament', article: 'das', plural: 'Medikamente', english: 'medication', level: 'B1', declension: 'strong-s' },
+  { german: 'Schmerz', article: 'der', plural: 'Schmerzen', english: 'pain', level: 'B1', declension: 'strong-es' },
+  { german: 'Verletzung', article: 'die', plural: 'Verletzungen', english: 'injury', level: 'B1' },
+  { german: 'Untersuchung', article: 'die', plural: 'Untersuchungen', english: 'examination', level: 'B1' },
+  { german: 'Behandlung', article: 'die', plural: 'Behandlungen', english: 'treatment', level: 'B1' },
+  { german: 'Nachricht', article: 'die', plural: 'Nachrichten', english: 'message, news', level: 'B1' },
+  { german: 'Zeitung', article: 'die', plural: 'Zeitungen', english: 'newspaper', level: 'B1' },
+  { german: 'Zeitschrift', article: 'die', plural: 'Zeitschriften', english: 'magazine', level: 'B1' },
+  { german: 'Sendung', article: 'die', plural: 'Sendungen', english: 'broadcast, show', level: 'B1' },
+  { german: 'Werbung', article: 'die', plural: 'Werbungen', english: 'advertising', level: 'B1' },
+  { german: 'Internet', article: 'das', plural: 'Internet', english: 'internet', level: 'B1', declension: 'strong-s' },
+  { german: 'Netzwerk', article: 'das', plural: 'Netzwerke', english: 'network', level: 'B1', declension: 'strong-s' },
+  { german: 'Anwendung', article: 'die', plural: 'Anwendungen', english: 'application (app)', level: 'B1' },
+  { german: 'Datei', article: 'die', plural: 'Dateien', english: 'file (computer)', level: 'B1' },
+  { german: 'Bildschirm', article: 'der', plural: 'Bildschirme', english: 'screen', level: 'B1', declension: 'strong-s' },
+  { german: 'Gefühl', article: 'das', plural: 'Gefühle', english: 'feeling', level: 'B1', declension: 'strong-s' },
+  { german: 'Freude', article: 'die', plural: 'Freuden', english: 'joy', level: 'B1' },
+  { german: 'Angst', article: 'die', plural: 'Ängste', english: 'fear', level: 'B1' },
+  { german: 'Sorge', article: 'die', plural: 'Sorgen', english: 'worry', level: 'B1' },
+  { german: 'Wut', article: 'die', plural: 'Wut', english: 'anger', level: 'B1' },
+  { german: 'Liebe', article: 'die', plural: 'Lieben', english: 'love', level: 'B1' },
+  { german: 'Freundschaft', article: 'die', plural: 'Freundschaften', english: 'friendship', level: 'B1' },
+  { german: 'Beziehung', article: 'die', plural: 'Beziehungen', english: 'relationship', level: 'B1' },
+  { german: 'Vertrauen', article: 'das', plural: 'Vertrauen', english: 'trust', level: 'B1', declension: 'strong-s' },
+  { german: 'Respekt', article: 'der', plural: 'Respekt', english: 'respect', level: 'B1', declension: 'strong-s' },
+  { german: 'Meinung', article: 'die', plural: 'Meinungen', english: 'opinion', level: 'B1' },
+  { german: 'Entscheidung', article: 'die', plural: 'Entscheidungen', english: 'decision', level: 'B1' },
+  { german: 'Möglichkeit', article: 'die', plural: 'Möglichkeiten', english: 'possibility', level: 'B1' },
+  { german: 'Erfahrung', article: 'die', plural: 'Erfahrungen', english: 'experience', level: 'B1' },
+  { german: 'Idee', article: 'die', plural: 'Ideen', english: 'idea', level: 'B1' },
+  { german: 'Plan', article: 'der', plural: 'Pläne', english: 'plan', level: 'B1', declension: 'strong-s' },
+  { german: 'Ziel', article: 'das', plural: 'Ziele', english: 'goal', level: 'B1', declension: 'strong-s' },
+  { german: 'Grund', article: 'der', plural: 'Gründe', english: 'reason', level: 'B1', declension: 'strong-es' },
+  { german: 'Problem', article: 'das', plural: 'Probleme', english: 'problem', level: 'B1', declension: 'strong-s' },
+  { german: 'Lösung', article: 'die', plural: 'Lösungen', english: 'solution', level: 'B1' },
+  { german: 'Nachbar', article: 'der', plural: 'Nachbarn', english: 'neighbor (male)', level: 'B1', declension: 'weak-n' },
+  { german: 'Nachbarin', article: 'die', plural: 'Nachbarinnen', english: 'neighbor (female)', level: 'B1' },
+  { german: 'Mensch', article: 'der', plural: 'Menschen', english: 'human being, person', level: 'B1', declension: 'weak-en' },
+  { german: 'Herr', article: 'der', plural: 'Herren', english: 'gentleman, Mr.', level: 'B1', declension: 'weak-n' },
+  { german: 'Name', article: 'der', plural: 'Namen', english: 'name', level: 'B1', declension: 'mixed-ns' },
+  { german: 'Kleidung', article: 'die', plural: 'Kleidung', english: 'clothing', level: 'B1' },
+  { german: 'Hose', article: 'die', plural: 'Hosen', english: 'trousers', level: 'B1' },
+  { german: 'Jacke', article: 'die', plural: 'Jacken', english: 'jacket', level: 'B1' },
+  { german: 'Schuh', article: 'der', plural: 'Schuhe', english: 'shoe', level: 'B1', declension: 'strong-s' },
+  { german: 'Mütze', article: 'die', plural: 'Mützen', english: 'cap, beanie', level: 'B1' },
+  { german: 'Sport', article: 'der', plural: 'Sport', english: 'sport', level: 'B1', declension: 'strong-s' },
+  { german: 'Musik', article: 'die', plural: 'Musik', english: 'music', level: 'B1' },
+  { german: 'Film', article: 'der', plural: 'Filme', english: 'film, movie', level: 'B1', declension: 'strong-s' },
+  { german: 'Konzert', article: 'das', plural: 'Konzerte', english: 'concert', level: 'B1', declension: 'strong-s' },
+  { german: 'Ausstellung', article: 'die', plural: 'Ausstellungen', english: 'exhibition', level: 'B1' },
+
+  // ---------- B2 (80) ----------
+  { german: 'Wirtschaft', article: 'die', plural: 'Wirtschaften', english: 'economy', level: 'B2' },
+  { german: 'Politik', article: 'die', plural: 'Politik', english: 'politics', level: 'B2' },
+  { german: 'Regierung', article: 'die', plural: 'Regierungen', english: 'government', level: 'B2' },
+  { german: 'Gesetz', article: 'das', plural: 'Gesetze', english: 'law', level: 'B2', declension: 'strong-es' },
+  { german: 'Partei', article: 'die', plural: 'Parteien', english: 'political party', level: 'B2' },
+  { german: 'Wahl', article: 'die', plural: 'Wahlen', english: 'election, choice', level: 'B2' },
+  { german: 'Präsident', article: 'der', plural: 'Präsidenten', english: 'president (male)', level: 'B2', declension: 'weak-en' },
+  { german: 'Minister', article: 'der', plural: 'Minister', english: 'minister (government)', level: 'B2', declension: 'strong-s' },
+  { german: 'Verwaltung', article: 'die', plural: 'Verwaltungen', english: 'administration', level: 'B2' },
+  { german: 'Steuer', article: 'die', plural: 'Steuern', english: 'tax', level: 'B2' },
+  { german: 'Gesellschaft', article: 'die', plural: 'Gesellschaften', english: 'society', level: 'B2' },
+  { german: 'Kultur', article: 'die', plural: 'Kulturen', english: 'culture', level: 'B2' },
+  { german: 'Tradition', article: 'die', plural: 'Traditionen', english: 'tradition', level: 'B2' },
+  { german: 'Religion', article: 'die', plural: 'Religionen', english: 'religion', level: 'B2' },
+  { german: 'Sprache', article: 'die', plural: 'Sprachen', english: 'language', level: 'B2' },
+  { german: 'Bevölkerung', article: 'die', plural: 'Bevölkerungen', english: 'population', level: 'B2' },
+  { german: 'Generation', article: 'die', plural: 'Generationen', english: 'generation', level: 'B2' },
+  { german: 'Gemeinschaft', article: 'die', plural: 'Gemeinschaften', english: 'community', level: 'B2' },
+  { german: 'Vielfalt', article: 'die', plural: 'Vielfalt', english: 'diversity', level: 'B2' },
+  { german: 'Identität', article: 'die', plural: 'Identitäten', english: 'identity', level: 'B2' },
+  { german: 'Umwelt', article: 'die', plural: 'Umwelt', english: 'environment', level: 'B2' },
+  { german: 'Klima', article: 'das', plural: 'Klimas', english: 'climate', level: 'B2', declension: 'strong-s' },
+  { german: 'Energie', article: 'die', plural: 'Energien', english: 'energy', level: 'B2' },
+  { german: 'Ressource', article: 'die', plural: 'Ressourcen', english: 'resource', level: 'B2' },
+  { german: 'Forschung', article: 'die', plural: 'Forschungen', english: 'research', level: 'B2' },
+  { german: 'Wissenschaft', article: 'die', plural: 'Wissenschaften', english: 'science', level: 'B2' },
+  { german: 'Technologie', article: 'die', plural: 'Technologien', english: 'technology', level: 'B2' },
+  { german: 'Erfindung', article: 'die', plural: 'Erfindungen', english: 'invention', level: 'B2' },
+  { german: 'Entwicklung', article: 'die', plural: 'Entwicklungen', english: 'development', level: 'B2' },
+  { german: 'Theorie', article: 'die', plural: 'Theorien', english: 'theory', level: 'B2' },
+  { german: 'Journalist', article: 'der', plural: 'Journalisten', english: 'journalist (male)', level: 'B2', declension: 'weak-en' },
+  { german: 'Tourist', article: 'der', plural: 'Touristen', english: 'tourist (male)', level: 'B2', declension: 'weak-en' },
+  { german: 'Touristin', article: 'die', plural: 'Touristinnen', english: 'tourist (female)', level: 'B2' },
+  { german: 'Redaktion', article: 'die', plural: 'Redaktionen', english: 'editorial office', level: 'B2' },
+  { german: 'Meinungsumfrage', article: 'die', plural: 'Meinungsumfragen', english: 'opinion poll', level: 'B2' },
+  { german: 'Öffentlichkeit', article: 'die', plural: 'Öffentlichkeit', english: 'the public', level: 'B2' },
+  { german: 'Herausforderung', article: 'die', plural: 'Herausforderungen', english: 'challenge', level: 'B2' },
+  { german: 'Verantwortung', article: 'die', plural: 'Verantwortungen', english: 'responsibility', level: 'B2' },
+  { german: 'Gerechtigkeit', article: 'die', plural: 'Gerechtigkeit', english: 'justice', level: 'B2' },
+  { german: 'Gleichheit', article: 'die', plural: 'Gleichheit', english: 'equality', level: 'B2' },
+  { german: 'Freiheit', article: 'die', plural: 'Freiheiten', english: 'freedom', level: 'B2' },
+  { german: 'Sicherheit', article: 'die', plural: 'Sicherheiten', english: 'security, safety', level: 'B2' },
+  { german: 'Toleranz', article: 'die', plural: 'Toleranzen', english: 'tolerance', level: 'B2' },
+  { german: 'Vorurteil', article: 'das', plural: 'Vorurteile', english: 'prejudice', level: 'B2', declension: 'strong-s' },
+  { german: 'Konflikt', article: 'der', plural: 'Konflikte', english: 'conflict', level: 'B2', declension: 'strong-s' },
+  { german: 'Experte', article: 'der', plural: 'Experten', english: 'expert (male)', level: 'B2', declension: 'weak-n' },
+  { german: 'Expertin', article: 'die', plural: 'Expertinnen', english: 'expert (female)', level: 'B2' },
+  { german: 'Kandidat', article: 'der', plural: 'Kandidaten', english: 'candidate (male)', level: 'B2', declension: 'weak-en' },
+  { german: 'Assistent', article: 'der', plural: 'Assistenten', english: 'assistant (male)', level: 'B2', declension: 'weak-en' },
+  { german: 'Architekt', article: 'der', plural: 'Architekten', english: 'architect (male)', level: 'B2', declension: 'weak-en' },
+  { german: 'Soldat', article: 'der', plural: 'Soldaten', english: 'soldier', level: 'B2', declension: 'weak-en' },
+  { german: 'Karriere', article: 'die', plural: 'Karrieren', english: 'career', level: 'B2' },
+  { german: 'Qualifikation', article: 'die', plural: 'Qualifikationen', english: 'qualification', level: 'B2' },
+  { german: 'Fähigkeit', article: 'die', plural: 'Fähigkeiten', english: 'ability, skill', level: 'B2' },
+  { german: 'Leistung', article: 'die', plural: 'Leistungen', english: 'achievement, performance', level: 'B2' },
+  { german: 'Gewohnheit', article: 'die', plural: 'Gewohnheiten', english: 'habit', level: 'B2' },
+  { german: 'Erwartung', article: 'die', plural: 'Erwartungen', english: 'expectation', level: 'B2' },
+  { german: 'Wahrnehmung', article: 'die', plural: 'Wahrnehmungen', english: 'perception', level: 'B2' },
+  { german: 'Vorstellung', article: 'die', plural: 'Vorstellungen', english: 'idea, imagination', level: 'B2' },
+  { german: 'Einstellung', article: 'die', plural: 'Einstellungen', english: 'attitude', level: 'B2' },
+  { german: 'Wirkung', article: 'die', plural: 'Wirkungen', english: 'effect', level: 'B2' },
+  { german: 'Ursache', article: 'die', plural: 'Ursachen', english: 'cause', level: 'B2' },
+  { german: 'Folge', article: 'die', plural: 'Folgen', english: 'consequence', level: 'B2' },
+  { german: 'Auswirkung', article: 'die', plural: 'Auswirkungen', english: 'impact', level: 'B2' },
+  { german: 'Bedingung', article: 'die', plural: 'Bedingungen', english: 'condition', level: 'B2' },
+  { german: 'Landschaft', article: 'die', plural: 'Landschaften', english: 'landscape', level: 'B2' },
+  { german: 'Küste', article: 'die', plural: 'Küsten', english: 'coast', level: 'B2' },
+  { german: 'Wüste', article: 'die', plural: 'Wüsten', english: 'desert', level: 'B2' },
+  { german: 'Gebirge', article: 'das', plural: 'Gebirge', english: 'mountain range', level: 'B2', declension: 'strong-s' },
+  { german: 'Kontinent', article: 'der', plural: 'Kontinente', english: 'continent', level: 'B2', declension: 'strong-s' },
+  { german: 'Gedanke', article: 'der', plural: 'Gedanken', english: 'thought', level: 'B2', declension: 'mixed-ns' },
+  { german: 'Absicht', article: 'die', plural: 'Absichten', english: 'intention', level: 'B2' },
+  { german: 'Zweifel', article: 'der', plural: 'Zweifel', english: 'doubt', level: 'B2', declension: 'strong-s' },
+  { german: 'Hinweis', article: 'der', plural: 'Hinweise', english: 'hint, clue', level: 'B2', declension: 'strong-es' },
+  { german: 'Beweis', article: 'der', plural: 'Beweise', english: 'proof, evidence', level: 'B2', declension: 'strong-es' },
+  { german: 'Behauptung', article: 'die', plural: 'Behauptungen', english: 'claim, assertion', level: 'B2' },
+  { german: 'Argument', article: 'das', plural: 'Argumente', english: 'argument', level: 'B2', declension: 'strong-s' },
+  { german: 'Widerspruch', article: 'der', plural: 'Widersprüche', english: 'contradiction', level: 'B2', declension: 'strong-s' },
+  { german: 'Zusammenhang', article: 'der', plural: 'Zusammenhänge', english: 'context, connection', level: 'B2', declension: 'strong-s' },
+  { german: 'Konsequenz', article: 'die', plural: 'Konsequenzen', english: 'consequence', level: 'B2' },
+
+  // ---------- C1 (60) ----------
+  { german: 'Philosophie', article: 'die', plural: 'Philosophien', english: 'philosophy', level: 'C1' },
+  { german: 'Philosoph', article: 'der', plural: 'Philosophen', english: 'philosopher', level: 'C1', declension: 'weak-en' },
+  { german: 'Ethik', article: 'die', plural: 'Ethik', english: 'ethics', level: 'C1' },
+  { german: 'Moral', article: 'die', plural: 'Moral', english: 'morality', level: 'C1' },
+  { german: 'Wahrheit', article: 'die', plural: 'Wahrheiten', english: 'truth', level: 'C1' },
+  { german: 'Erkenntnis', article: 'die', plural: 'Erkenntnisse', english: 'insight, realization', level: 'C1' },
+  { german: 'Bewusstsein', article: 'das', plural: 'Bewusstsein', english: 'consciousness', level: 'C1', declension: 'strong-s' },
+  { german: 'Existenz', article: 'die', plural: 'Existenzen', english: 'existence', level: 'C1' },
+  { german: 'Wesen', article: 'das', plural: 'Wesen', english: 'being, entity', level: 'C1', declension: 'strong-s' },
+  { german: 'Wille', article: 'der', plural: 'Willen', english: 'will, willpower', level: 'C1', declension: 'mixed-ns' },
+  { german: 'Glaube', article: 'der', plural: 'Glauben', english: 'belief, faith', level: 'C1', declension: 'mixed-ns' },
+  { german: 'Überzeugung', article: 'die', plural: 'Überzeugungen', english: 'conviction', level: 'C1' },
+  { german: 'Widerstand', article: 'der', plural: 'Widerstände', english: 'resistance', level: 'C1', declension: 'strong-s' },
+  { german: 'Unterdrückung', article: 'die', plural: 'Unterdrückungen', english: 'oppression', level: 'C1' },
+  { german: 'Ungleichheit', article: 'die', plural: 'Ungleichheiten', english: 'inequality', level: 'C1' },
+  { german: 'Ausgrenzung', article: 'die', plural: 'Ausgrenzungen', english: 'exclusion', level: 'C1' },
+  { german: 'Diskriminierung', article: 'die', plural: 'Diskriminierungen', english: 'discrimination', level: 'C1' },
+  { german: 'Integration', article: 'die', plural: 'Integrationen', english: 'integration', level: 'C1' },
+  { german: 'Migration', article: 'die', plural: 'Migrationen', english: 'migration', level: 'C1' },
+  { german: 'Globalisierung', article: 'die', plural: 'Globalisierung', english: 'globalization', level: 'C1' },
+  { german: 'Nachhaltigkeit', article: 'die', plural: 'Nachhaltigkeit', english: 'sustainability', level: 'C1' },
+  { german: 'Effizienz', article: 'die', plural: 'Effizienzen', english: 'efficiency', level: 'C1' },
+  { german: 'Produktivität', article: 'die', plural: 'Produktivität', english: 'productivity', level: 'C1' },
+  { german: 'Konsument', article: 'der', plural: 'Konsumenten', english: 'consumer', level: 'C1', declension: 'weak-en' },
+  { german: 'Produzent', article: 'der', plural: 'Produzenten', english: 'producer', level: 'C1', declension: 'weak-en' },
+  { german: 'Komponist', article: 'der', plural: 'Komponisten', english: 'composer', level: 'C1', declension: 'weak-en' },
+  { german: 'Diplomat', article: 'der', plural: 'Diplomaten', english: 'diplomat', level: 'C1', declension: 'weak-en' },
+  { german: 'Klient', article: 'der', plural: 'Klienten', english: 'client (male)', level: 'C1', declension: 'weak-en' },
+  { german: 'Biologe', article: 'der', plural: 'Biologen', english: 'biologist (male)', level: 'C1', declension: 'weak-n' },
+  { german: 'Physiker', article: 'der', plural: 'Physiker', english: 'physicist (male)', level: 'C1', declension: 'strong-s' },
+  { german: 'Chemiker', article: 'der', plural: 'Chemiker', english: 'chemist (male)', level: 'C1', declension: 'strong-s' },
+  { german: 'Hypothese', article: 'die', plural: 'Hypothesen', english: 'hypothesis', level: 'C1' },
+  { german: 'These', article: 'die', plural: 'Thesen', english: 'thesis, proposition', level: 'C1' },
+  { german: 'Analyse', article: 'die', plural: 'Analysen', english: 'analysis', level: 'C1' },
+  { german: 'Methode', article: 'die', plural: 'Methoden', english: 'method', level: 'C1' },
+  { german: 'Perspektive', article: 'die', plural: 'Perspektiven', english: 'perspective', level: 'C1' },
+  { german: 'Interpretation', article: 'die', plural: 'Interpretationen', english: 'interpretation', level: 'C1' },
+  { german: 'Kritik', article: 'die', plural: 'Kritiken', english: 'criticism, review', level: 'C1' },
+  { german: 'Debatte', article: 'die', plural: 'Debatten', english: 'debate', level: 'C1' },
+  { german: 'Kontroverse', article: 'die', plural: 'Kontroversen', english: 'controversy', level: 'C1' },
+  { german: 'Konsens', article: 'der', plural: 'Konsense', english: 'consensus', level: 'C1', declension: 'strong-es' },
+  { german: 'Kompromiss', article: 'der', plural: 'Kompromisse', english: 'compromise', level: 'C1', declension: 'strong-es' },
+  { german: 'Verhandlung', article: 'die', plural: 'Verhandlungen', english: 'negotiation', level: 'C1' },
+  { german: 'Vereinbarung', article: 'die', plural: 'Vereinbarungen', english: 'agreement', level: 'C1' },
+  { german: 'Glaubwürdigkeit', article: 'die', plural: 'Glaubwürdigkeit', english: 'credibility', level: 'C1' },
+  { german: 'Legitimität', article: 'die', plural: 'Legitimität', english: 'legitimacy', level: 'C1' },
+  { german: 'Souveränität', article: 'die', plural: 'Souveränität', english: 'sovereignty', level: 'C1' },
+  { german: 'Verfassung', article: 'die', plural: 'Verfassungen', english: 'constitution', level: 'C1' },
+  { german: 'Institution', article: 'die', plural: 'Institutionen', english: 'institution', level: 'C1' },
+  { german: 'Bürokratie', article: 'die', plural: 'Bürokratien', english: 'bureaucracy', level: 'C1' },
+  { german: 'Ideologie', article: 'die', plural: 'Ideologien', english: 'ideology', level: 'C1' },
+  { german: 'Doktrin', article: 'die', plural: 'Doktrinen', english: 'doctrine', level: 'C1' },
+  { german: 'Prinzip', article: 'das', plural: 'Prinzipien', english: 'principle', level: 'C1', declension: 'strong-s' },
+  { german: 'Grundsatz', article: 'der', plural: 'Grundsätze', english: 'fundamental principle', level: 'C1', declension: 'strong-es' },
+  { german: 'Maßstab', article: 'der', plural: 'Maßstäbe', english: 'benchmark, standard', level: 'C1', declension: 'strong-s' },
+  { german: 'Kriterium', article: 'das', plural: 'Kriterien', english: 'criterion', level: 'C1', declension: 'strong-s' },
+  { german: 'Phänomen', article: 'das', plural: 'Phänomene', english: 'phenomenon', level: 'C1', declension: 'strong-s' },
+  { german: 'Paradox', article: 'das', plural: 'Paradoxe', english: 'paradox', level: 'C1', declension: 'strong-es' },
+  { german: 'Dilemma', article: 'das', plural: 'Dilemmas', english: 'dilemma', level: 'C1', declension: 'strong-s' },
+  { german: 'Paradigma', article: 'das', plural: 'Paradigmen', english: 'paradigm', level: 'C1', declension: 'strong-s' },
+]
+
+export const words: Noun[] = RAW_WORDS.map(toNoun)
+
+export const wordsByKey = new Map(words.map((w) => [w.german, w]))
+export const allWordKeys = words.map((w) => w.german)
