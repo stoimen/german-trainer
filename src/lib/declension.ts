@@ -40,12 +40,18 @@ export type DeclensionQuestion = {
 export function buildQuestion(noun: Noun): DeclensionQuestion {
   const compatible = templates.filter((t) => !t.appliesTo || t.appliesTo(noun))
   const template = compatible[Math.floor(Math.random() * compatible.length)]
-  const flavor = FLAVORS[Math.floor(Math.random() * FLAVORS.length)]
 
   // noun.cases is always definite-form; strip the definite article to get the
   // correctly-declined noun (weak/mixed endings included), then re-attach
   // whichever article flavor this question is testing.
   const declinedNoun = noun.cases[template.case].split(' ').slice(1).join(' ')
+
+  // Weak/mixed nouns' oblique singular form is spelled identically to the
+  // plural (e.g. "Journalisten"). ein-/kein- only exist in the singular, so
+  // pairing them with a plural-looking noun reads as wrong even though it's
+  // correct — stick to definite articles there, same as it's usually taught.
+  const looksPlural = declinedNoun === noun.plural
+  const flavor = looksPlural ? 'definite' : FLAVORS[Math.floor(Math.random() * FLAVORS.length)]
   const correctArticle = FLAVOR_TABLES[flavor][template.case][noun.article]
 
   return {
