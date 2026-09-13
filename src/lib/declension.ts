@@ -1,12 +1,36 @@
-import type { Noun } from '../data/words'
-import { templates, type Template } from '../data/templates'
+import type { Article, Noun } from '../data/words'
+import { templates, type CaseName, type Template } from '../data/templates'
 import { shuffle } from './scheduler'
 
-const ALL_ARTICLE_FORMS = ['der', 'die', 'das', 'den', 'dem', 'des']
+export type Flavor = 'definite' | 'indefinite' | 'negative'
+
+const FLAVOR_TABLES: Record<Flavor, Record<CaseName, Record<Article, string>>> = {
+  definite: {
+    nominative: { der: 'der', die: 'die', das: 'das' },
+    accusative: { der: 'den', die: 'die', das: 'das' },
+    dative: { der: 'dem', die: 'der', das: 'dem' },
+    genitive: { der: 'des', die: 'der', das: 'des' },
+  },
+  indefinite: {
+    nominative: { der: 'ein', die: 'eine', das: 'ein' },
+    accusative: { der: 'einen', die: 'eine', das: 'ein' },
+    dative: { der: 'einem', die: 'einer', das: 'einem' },
+    genitive: { der: 'eines', die: 'einer', das: 'eines' },
+  },
+  negative: {
+    nominative: { der: 'kein', die: 'keine', das: 'kein' },
+    accusative: { der: 'keinen', die: 'keine', das: 'kein' },
+    dative: { der: 'keinem', die: 'keiner', das: 'keinem' },
+    genitive: { der: 'keines', die: 'keiner', das: 'keines' },
+  },
+}
+
+const FLAVORS = Object.keys(FLAVOR_TABLES) as Flavor[]
 
 export type DeclensionQuestion = {
   noun: Noun
   template: Template
+  flavor: Flavor
   germanSentence: string // contains a literal "___" placeholder
   englishHint: string
   correctArticle: string
@@ -14,22 +38,29 @@ export type DeclensionQuestion = {
 }
 
 export function buildQuestion(noun: Noun): DeclensionQuestion {
-  const template = templates[Math.floor(Math.random() * templates.length)]
-  const full = noun.cases[template.case]
-  const [correctArticle, ...rest] = full.split(' ')
-  const declinedNoun = rest.join(' ')
+  const compatible = templates.filter((t) => !t.appliesTo || t.appliesTo(noun))
+  const template = compatible[Math.floor(Math.random() * compatible.length)]
+  const flavor = FLAVORS[Math.floor(Math.random() * FLAVORS.length)]
+
+  // noun.cases is always definite-form; strip the definite article to get the
+  // correctly-declined noun (weak/mixed endings included), then re-attach
+  // whichever article flavor this question is testing.
+  const declinedNoun = noun.cases[template.case].split(' ').slice(1).join(' ')
+  const correctArticle = FLAVOR_TABLES[flavor][template.case][noun.article]
 
   return {
     noun,
     template,
+    flavor,
     germanSentence: template.buildGerman(declinedNoun),
     englishHint: template.buildEnglish(noun.english),
     correctArticle,
-    options: buildOptions(correctArticle),
+    options: buildOptions(flavor, correctArticle),
   }
 }
 
-function buildOptions(correct: string): string[] {
-  const distractors = shuffle(ALL_ARTICLE_FORMS.filter((a) => a !== correct)).slice(0, 3)
+function buildOptions(flavor: Flavor, correct: string): string[] {
+  const pool = new Set(Object.values(FLAVOR_TABLES[flavor]).flatMap((byGender) => Object.values(byGender)))
+  const distractors = shuffle([...pool].filter((a) => a !== correct)).slice(0, 3)
   return shuffle([correct, ...distractors])
 }
