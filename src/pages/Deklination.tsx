@@ -2,20 +2,19 @@ import { useMemo, useRef, useState } from 'react'
 import TopBar from '../components/TopBar'
 import ProgressBar from '../components/ProgressBar'
 import { useSessionQueue } from '../hooks/useSessionQueue'
-import { allWordKeys, wordsByKey } from '../data/words'
+import { deklinationById, deklinationKeys } from '../data/deklinationSentences'
 import { buildQuestion } from '../lib/declension'
 
 type Feedback = { status: 'correct' } | { status: 'wrong'; correctArticle: string; reason: string }
 
 export default function Deklination() {
-  const keys = useMemo(() => allWordKeys, [])
+  const keys = useMemo(() => deklinationKeys, [])
   const { currentKey, progress, answer } = useSessionQueue('deklination', keys)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const timeoutRef = useRef<number | undefined>(undefined)
 
-  const noun = currentKey ? wordsByKey.get(currentKey) : undefined
-  // Re-rolled each time the current word changes (the queue never repeats the same word twice in a row).
-  const question = useMemo(() => (noun ? buildQuestion(noun) : undefined), [noun])
+  const entry = currentKey ? deklinationById.get(currentKey) : undefined
+  const question = useMemo(() => (entry ? buildQuestion(entry) : undefined), [entry])
 
   function handlePick(option: string) {
     if (feedback || !question) return
@@ -24,7 +23,7 @@ export default function Deklination() {
     if (wasCorrect) {
       setFeedback({ status: 'correct' })
     } else {
-      setFeedback({ status: 'wrong', correctArticle: question.correctArticle, reason: question.template.reason })
+      setFeedback({ status: 'wrong', correctArticle: question.correctArticle, reason: question.reason })
     }
 
     timeoutRef.current = window.setTimeout(
@@ -40,7 +39,7 @@ export default function Deklination() {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col">
         <TopBar title="Deklination" />
-        <p className="mt-20 text-center text-slate-500">No words available.</p>
+        <p className="mt-20 text-center text-slate-500">No sentences available.</p>
       </div>
     )
   }

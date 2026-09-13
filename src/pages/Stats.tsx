@@ -4,24 +4,25 @@ import AccuracyChart from '../components/AccuracyChart'
 import { getHistoryForMode, resetHistory, type SessionRecord } from '../lib/history'
 import { getAllRecords, masteryOf, resetScheduler, type Mode } from '../lib/scheduler'
 import { allWordKeys } from '../data/words'
+import { deklinationKeys } from '../data/deklinationSentences'
 import { removeJSON } from '../lib/storage'
 
-const MODES: { mode: Mode; label: string }[] = [
-  { mode: 'artikel', label: 'Artikel' },
-  { mode: 'vokabeln', label: 'Vokabeln' },
-  { mode: 'deklination', label: 'Deklination' },
+const MODES: { mode: Mode; label: string; keys: string[] }[] = [
+  { mode: 'artikel', label: 'Artikel', keys: allWordKeys },
+  { mode: 'vokabeln', label: 'Vokabeln', keys: allWordKeys },
+  { mode: 'deklination', label: 'Deklination', keys: deklinationKeys },
 ]
 
 function useModeStats(refreshKey: number) {
   return useMemo(() => {
-    return MODES.map(({ mode, label }) => {
+    return MODES.map(({ mode, label, keys }) => {
       const history: SessionRecord[] = getHistoryForMode(mode)
       const records = getAllRecords(mode)
 
       let mastered = 0
       let inProgress = 0
       let unseen = 0
-      for (const key of allWordKeys) {
+      for (const key of keys) {
         const bucket = masteryOf(records[key])
         if (bucket === 'mastered') mastered++
         else if (bucket === 'inProgress') inProgress++
